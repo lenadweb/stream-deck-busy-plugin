@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="en">
+    <title>Busy Toggle</title>
+    <meta charset="utf-8" />
+    <style>
+        :root {
+            --bg: #2d2d2d;
+            --panel-input: #1a1a1a;
+            --border-strong: #555;
+            --text: #e8e8e8;
+            --muted: #8a8a8a;
+            --free: #22c55e;
+            --busy: #ef4444;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            font-size: 13px;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container { padding: 12px 14px 14px; }
+
+        .field { margin-bottom: 13px; }
+        .field > label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .3px;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .dot.free { background: var(--free); }
+        .dot.busy { background: var(--busy); }
+        .hint {
+            margin-top: 5px;
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        input {
+            width: 100%;
+            background-color: var(--panel-input);
+            color: #fff;
+            border: 1px solid var(--border-strong);
+            border-radius: 5px;
+            padding: 7px 9px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        #freeText:focus {
+            outline: none;
+            border-color: var(--free);
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, .18);
+        }
+        #busyText:focus {
+            outline: none;
+            border-color: var(--busy);
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, .18);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="field">
+            <label for="freeText"><span class="dot free"></span>Free text</label>
+            <input type="text" id="freeText" placeholder="FREE" maxlength="40" />
+        </div>
+
+        <div class="field">
+            <label for="busyText"><span class="dot busy"></span>Busy text</label>
+            <input type="text" id="busyText" placeholder="BUSY" maxlength="40" />
+            <div class="hint">Leave empty for FREE / BUSY. Long text wraps and shrinks to fit. The status itself is shared by every Busy Toggle key and dial.</div>
+        </div>
+    </div>
+
+    <script>
+        let websocket = null;
+        let uuid = null;
+        let settings = {};
+
+        function $(id) { return document.getElementById(id); }
+
+        function connectElgatoStreamDeckSocket(port, uuidValue, registerEvent, info, actionInfo) {
+            uuid = uuidValue;
+
+            if (actionInfo) {
+                const parsed = JSON.parse(actionInfo);
+                settings = parsed?.payload?.settings || {};
+            }
+
+            websocket = new WebSocket("ws://127.0.0.1:" + port);
+
+            websocket.onopen = function () {
+                websocket.send(JSON.stringify({ event: registerEvent, uuid: uuid }));
+                applySettings();
+            };
+
+            websocket.onmessage = function (evt) {
+                const data = JSON.parse(evt.data);
+                if (data.event === "didReceiveSettings") {
+                    settings = data.payload?.settings || {};
+                    applySettings();
+                }
+            };
+        }
+
+        function applySettings() {
+            $("freeText").value = settings.freeText || "";
+            $("busyText").value = settings.busyText || "";
+        }
+
+        function saveSettings() {
+            settings.freeText = $("freeText").value.trim();
+            settings.busyText = $("busyText").value.trim();
+
+            if (websocket && uuid) {
+                websocket.send(JSON.stringify({
+                    event: "setSettings",
+                    context: uuid,
+                    payload: settings,
+                }));
+            }
+        }
+
+        ["freeText", "busyText"].forEach(function (id) {
+            $(id).addEventListener("input", saveSettings);
+        });
+    </script>
+</body>
+
+</html>

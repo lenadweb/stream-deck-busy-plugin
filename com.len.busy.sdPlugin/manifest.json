@@ -1,0 +1,60 @@
+{
+  "Name": "Busy Toggle",
+  "Version": "0.1.0.0",
+  "Author": "lenadweb",
+  "URL": "https://github.com/lenadweb/stream-deck-busy-plugin",
+  "Actions": [
+    {
+      "Name": "Busy Toggle",
+      "UUID": "com.len.busy.toggle",
+      "Icon": "imgs/actions/toggle/icon",
+      "Tooltip": "Toggles between free (green) and busy (red).",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "PropertyInspectorPath": "ui/settings.html",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/full-view.json",
+        "StackColor": "#10B981",
+        "TriggerDescription": {
+          "Push": "Toggle",
+          "Touch": "Toggle",
+          "Rotate": "Right: busy, left: free"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/toggle/key",
+          "TitleAlignment": "middle"
+        }
+      ]
+    }
+  ],
+  "Category": "Busy Toggle",
+  "CategoryIcon": "imgs/plugin/category-icon",
+  "CodePath": "bin/plugin.js",
+  "Description": "A one-press status light for your desk: green means you are free to talk, red means busy, do not disturb. Works on keys and Stream Deck+ dials.",
+  "Icon": "imgs/plugin/plugin-icon",
+  "SDKVersion": 3,
+  "Software": {
+    "MinimumVersion": "6.9"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "12"
+    },
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "20",
+    "Debug": "enabled"
+  },
+  "UUID": "com.len.busy"
+}
