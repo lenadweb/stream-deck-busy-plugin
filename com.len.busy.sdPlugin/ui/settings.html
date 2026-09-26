@@ -7,14 +7,17 @@
     <style>
         :root {
             --bg: #2d2d2d;
-            --panel-input: #1a1a1a;
+            --input: #1a1a1a;
+            --border: #3a3a3a;
             --border-strong: #555;
             --text: #e8e8e8;
             --muted: #8a8a8a;
             --free: #22c55e;
             --busy: #ef4444;
         }
+
         * { box-sizing: border-box; }
+
         body {
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -23,124 +26,226 @@
             font-size: 13px;
             -webkit-font-smoothing: antialiased;
         }
+
         .container { padding: 12px 14px 14px; }
 
-        .field { margin-bottom: 13px; }
-        .field > label {
+        .state {
+            --accent: var(--free);
+            margin-bottom: 14px;
+            padding-bottom: 2px;
+            border-bottom: 1px solid var(--border);
+        }
+        .state[data-status="busy"] { --accent: var(--busy); }
+
+        .state-title {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 7px;
+            margin: 0 0 10px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .state-title::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .field { margin-bottom: 12px; }
+        .field-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 5px;
+        }
+        .label {
             font-size: 11px;
             font-weight: 600;
             letter-spacing: .3px;
             color: var(--muted);
             text-transform: uppercase;
         }
-        .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-        .dot.free { background: var(--free); }
-        .dot.busy { background: var(--busy); }
-        .hint {
-            margin-top: 5px;
-            font-size: 11px;
-            color: var(--muted);
-            line-height: 1.4;
-        }
 
-        input {
+        .input {
             width: 100%;
-            background-color: var(--panel-input);
+            background-color: var(--input);
             color: #fff;
             border: 1px solid var(--border-strong);
             border-radius: 5px;
             padding: 7px 9px;
             font-size: 13px;
             font-family: inherit;
-            transition: border-color .15s, box-shadow .15s;
+            transition: border-color .15s, box-shadow .15s, opacity .15s;
         }
-        #freeText:focus {
+        .input:focus {
             outline: none;
-            border-color: var(--free);
-            box-shadow: 0 0 0 3px rgba(34, 197, 94, .18);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
         }
-        #busyText:focus {
-            outline: none;
-            border-color: var(--busy);
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, .18);
+        .input:disabled { opacity: .4; }
+
+        .switch {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--muted);
+            cursor: pointer;
+        }
+        .switch input {
+            margin: 0;
+            accent-color: var(--accent);
+        }
+
+        .hint {
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 1.4;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <div class="field">
-            <label for="freeText"><span class="dot free"></span>Free text</label>
-            <input type="text" id="freeText" placeholder="FREE" maxlength="40" />
-        </div>
-
-        <div class="field">
-            <label for="busyText"><span class="dot busy"></span>Busy text</label>
-            <input type="text" id="busyText" placeholder="BUSY" maxlength="40" />
-            <div class="hint">Leave empty for FREE / BUSY. Long text wraps and shrinks to fit. The status itself is shared by every Busy Toggle key and dial.</div>
-        </div>
+        <div id="states"></div>
+        <div class="hint">Empty text means FREE / BUSY. The status itself is shared by every Busy Toggle key and dial.</div>
     </div>
 
+    <template id="state-template">
+        <section class="state">
+            <h2 class="state-title"></h2>
+            <div class="field">
+                <div class="field-header">
+                    <label class="label" data-for="icon">Icon</label>
+                </div>
+                <select class="input" data-field="icon"></select>
+            </div>
+            <div class="field">
+                <div class="field-header">
+                    <label class="label" data-for="text">Text</label>
+                    <label class="switch"><input type="checkbox" data-field="showText" />Show</label>
+                </div>
+                <input class="input" type="text" data-field="text" maxlength="40" />
+            </div>
+        </section>
+    </template>
+
     <script>
-        let websocket = null;
-        let uuid = null;
-        let settings = {};
+        const STATES = [
+            { status: "free", title: "Free", icon: "check", placeholder: "FREE" },
+            { status: "busy", title: "Busy", icon: "no-entry", placeholder: "BUSY" },
+        ];
 
-        function $(id) { return document.getElementById(id); }
+        const ICONS = [
+            { value: "check", label: "Check" },
+            { value: "no-entry", label: "No entry" },
+            { value: "coffee", label: "Coffee" },
+            { value: "smile", label: "Smile" },
+            { value: "door-open", label: "Door open" },
+            { value: "headphones", label: "Headphones" },
+            { value: "mic", label: "Microphone" },
+            { value: "video", label: "Video call" },
+            { value: "phone", label: "Phone" },
+            { value: "moon", label: "Moon" },
+            { value: "lock", label: "Lock" },
+            { value: "bell-off", label: "Bell off" },
+            { value: "none", label: "No icon" },
+        ];
 
-        function connectElgatoStreamDeckSocket(port, uuidValue, registerEvent, info, actionInfo) {
-            uuid = uuidValue;
+        const inspector = {
+            websocket: null,
+            context: null,
+            settings: {},
+            forms: new Map(),
+        };
 
-            if (actionInfo) {
-                const parsed = JSON.parse(actionInfo);
-                settings = parsed?.payload?.settings || {};
-            }
+        function connectElgatoStreamDeckSocket(port, context, registerEvent, info, actionInfo) {
+            inspector.context = context;
+            inspector.settings = actionInfo ? JSON.parse(actionInfo).payload?.settings ?? {} : {};
+            inspector.websocket = new WebSocket("ws://127.0.0.1:" + port);
 
-            websocket = new WebSocket("ws://127.0.0.1:" + port);
-
-            websocket.onopen = function () {
-                websocket.send(JSON.stringify({ event: registerEvent, uuid: uuid }));
-                applySettings();
+            inspector.websocket.onopen = () => {
+                inspector.websocket.send(JSON.stringify({ event: registerEvent, uuid: context }));
+                renderSettings();
             };
 
-            websocket.onmessage = function (evt) {
-                const data = JSON.parse(evt.data);
+            inspector.websocket.onmessage = (message) => {
+                const data = JSON.parse(message.data);
                 if (data.event === "didReceiveSettings") {
-                    settings = data.payload?.settings || {};
-                    applySettings();
+                    inspector.settings = data.payload?.settings ?? {};
+                    renderSettings();
                 }
             };
         }
 
-        function applySettings() {
-            $("freeText").value = settings.freeText || "";
-            $("busyText").value = settings.busyText || "";
+        function createStateForm(state) {
+            const section = document.getElementById("state-template").content.firstElementChild.cloneNode(true);
+            section.dataset.status = state.status;
+            section.querySelector(".state-title").textContent = state.title;
+
+            const fields = {
+                icon: section.querySelector('[data-field="icon"]'),
+                showText: section.querySelector('[data-field="showText"]'),
+                text: section.querySelector('[data-field="text"]'),
+            };
+
+            ICONS.forEach(({ value, label }) => fields.icon.add(new Option(label, value)));
+            fields.text.placeholder = state.placeholder;
+
+            section.querySelectorAll("[data-for]").forEach((label) => {
+                const id = `${state.status}-${label.dataset.for}`;
+                fields[label.dataset.for].id = id;
+                label.htmlFor = id;
+            });
+
+            fields.icon.addEventListener("change", saveSettings);
+            fields.showText.addEventListener("change", saveSettings);
+            fields.text.addEventListener("input", saveSettings);
+
+            return { section, fields };
+        }
+
+        function renderSettings() {
+            STATES.forEach((state) => {
+                const { fields } = inspector.forms.get(state.status);
+                const current = inspector.settings[state.status] ?? {};
+                fields.icon.value = current.icon ?? state.icon;
+                fields.showText.checked = current.showText !== false;
+                fields.text.value = current.text ?? "";
+                fields.text.disabled = !fields.showText.checked;
+            });
+        }
+
+        function readForm({ fields }) {
+            fields.text.disabled = !fields.showText.checked;
+            return {
+                icon: fields.icon.value,
+                showText: fields.showText.checked,
+                text: fields.text.value.trim(),
+            };
         }
 
         function saveSettings() {
-            settings.freeText = $("freeText").value.trim();
-            settings.busyText = $("busyText").value.trim();
-
-            if (websocket && uuid) {
-                websocket.send(JSON.stringify({
-                    event: "setSettings",
-                    context: uuid,
-                    payload: settings,
-                }));
-            }
+            inspector.settings = Object.fromEntries(
+                STATES.map(({ status }) => [status, readForm(inspector.forms.get(status))]),
+            );
+            inspector.websocket?.send(JSON.stringify({
+                event: "setSettings",
+                context: inspector.context,
+                payload: inspector.settings,
+            }));
         }
 
-        ["freeText", "busyText"].forEach(function (id) {
-            $(id).addEventListener("input", saveSettings);
+        STATES.forEach((state) => {
+            const form = createStateForm(state);
+            inspector.forms.set(state.status, form);
+            document.getElementById("states").appendChild(form.section);
         });
+
+        renderSettings();
     </script>
 </body>
 
