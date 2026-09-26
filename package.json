@@ -6,6 +6,8 @@
   "scripts": {
     "build": "rollup -c",
     "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.len.busy\"",
+    "link": "streamdeck link com.len.busy.sdPlugin",
+    "unlink": "streamdeck unlink com.len.busy",
     "version:bump": "node scripts/bump-version.mjs",
     "release": "npm run version:bump && npm run build && streamdeck pack com.len.busy.sdPlugin --force --output ."
   },

@@ -35,6 +35,8 @@ The text is set per key, so different keys can use different words. The status i
 ```bash
 npm install
 npm run build      # one-off build
+npm run link       # install the local build into Stream Deck
+npm run unlink     # remove it from Stream Deck
 npm run watch      # rebuild and restart the plugin on change
 npm run release    # bump the version, build and pack a .streamDeckPlugin
 ```
