@@ -1,0 +1,12 @@
+node_modules/
+
+*.sdPlugin/bin
+*.sdPlugin/logs
+/.idea
+.env
+tmp/
+.vscode/
+.agents/
+*.streamDeckPlugin
+.DS_Store
+/.preview

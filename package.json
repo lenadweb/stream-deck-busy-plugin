@@ -1,0 +1,37 @@
+{
+  "name": "stream-deck-busy",
+  "version": "0.1.0",
+  "description": "Stream Deck toggle that shows whether you are free or busy: green means come in, red means do not disturb.",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.len.busy\"",
+    "version:bump": "node scripts/bump-version.mjs",
+    "release": "npm run version:bump && npm run build && streamdeck pack com.len.busy.sdPlugin --force --output ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lenadweb/stream-deck-busy-plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lenadweb/stream-deck-busy-plugin/issues"
+  },
+  "homepage": "https://github.com/lenadweb/stream-deck-busy-plugin#readme",
+  "author": "lenadweb <lenadweber@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@elgato/cli": "^1.7.0",
+    "@rollup/plugin-commonjs": "^28.0.0",
+    "@rollup/plugin-node-resolve": "^15.2.2",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.0",
+    "@tsconfig/node20": "^20.1.2",
+    "@types/node": "~20.15.0",
+    "rollup": "^4.0.2",
+    "tslib": "^2.6.2",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "^2.0.0"
+  }
+}
