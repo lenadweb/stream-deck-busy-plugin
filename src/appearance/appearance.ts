@@ -1,30 +1,34 @@
+import { resolveAutoReset } from "../schedule/auto-reset";
+import { formatTimeLeft } from "../schedule/time-left";
+import { Timestamp } from "../schedule/time";
+import { BusySettings, StateSettings } from "../settings/busy-settings";
 import { Status } from "../status/status";
-import { BusySettings, StateSettings } from "./busy-settings";
+import { StatusSnapshot } from "../status/status-snapshot";
 import { IconName, isIconName, NO_ICON } from "./icon";
 
 export type Appearance = {
-    status: Status;
-    icon: IconName | null;
-    text: string | null;
+    readonly status: Status;
+    readonly icon: IconName | null;
+    readonly text: string | null;
 };
 
 type StateDefaults = {
-    icon: IconName;
-    text: string;
+    readonly icon: IconName;
+    readonly text: string;
 };
 
-const DEFAULTS: Record<Status, StateDefaults> = {
+const DEFAULTS: Readonly<Record<Status, StateDefaults>> = {
     [Status.Free]: { icon: IconName.Check, text: "FREE" },
     [Status.Busy]: { icon: IconName.NoEntry, text: "BUSY" },
 };
 
-export function resolveAppearance(status: Status, settings: BusySettings): Appearance {
-    const state = settings[status] ?? {};
-    const defaults = DEFAULTS[status];
+export function resolveAppearance(snapshot: StatusSnapshot, settings: BusySettings, at: Timestamp): Appearance {
+    const state = settings[snapshot.status] ?? {};
+    const defaults = DEFAULTS[snapshot.status];
     return {
-        status,
+        status: snapshot.status,
         icon: resolveIcon(state, defaults),
-        text: resolveText(state, defaults),
+        text: resolveTimeLeft(snapshot, settings, at) ?? resolveText(state, defaults),
     };
 }
 
@@ -40,4 +44,11 @@ function resolveText({ text, showText }: StateSettings, defaults: StateDefaults)
         return null;
     }
     return text?.trim() || defaults.text;
+}
+
+function resolveTimeLeft({ resetAt }: StatusSnapshot, settings: BusySettings, at: Timestamp): string | null {
+    if (resetAt === null || !resolveAutoReset(settings.autoReset).showTimeLeft) {
+        return null;
+    }
+    return formatTimeLeft(resetAt - at);
 }
