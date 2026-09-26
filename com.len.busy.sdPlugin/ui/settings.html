@@ -29,6 +29,36 @@
 
         .container { padding: 12px 14px 14px; }
 
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .tab {
+            flex: 1;
+            padding: 8px 4px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color .15s, border-color .15s;
+        }
+        .tab:hover { color: var(--text); }
+        .tab[aria-selected="true"] {
+            color: #fff;
+            border-bottom-color: var(--text);
+        }
+        .panel[hidden] { display: none; }
+
+        .group {
+            --accent: #3b82f6;
+            margin-bottom: 14px;
+        }
+
         .state {
             --accent: var(--free);
             margin-bottom: 14px;
@@ -37,7 +67,7 @@
         }
         .state[data-status="busy"] { --accent: var(--busy); }
 
-        .state-title {
+        .section-title {
             display: flex;
             align-items: center;
             gap: 7px;
@@ -46,7 +76,7 @@
             font-weight: 700;
             color: #fff;
         }
-        .state-title::before {
+        .section-title::before {
             content: "";
             width: 8px;
             height: 8px;
@@ -99,6 +129,11 @@
             margin: 0;
             accent-color: var(--accent);
         }
+        .switch.wide {
+            margin-bottom: 12px;
+            font-size: 12px;
+            color: var(--text);
+        }
 
         .hint {
             font-size: 11px;
@@ -110,13 +145,35 @@
 
 <body>
     <div class="container">
-        <div id="states"></div>
-        <div class="hint">Empty text means FREE / BUSY. The status itself is shared by every Busy Toggle key and dial.</div>
+        <div class="tabs" role="tablist">
+            <button class="tab" role="tab" data-tab="states" aria-selected="true">States</button>
+            <button class="tab" role="tab" data-tab="advanced" aria-selected="false">Advanced</button>
+        </div>
+
+        <div class="panel" role="tabpanel" data-panel="states">
+            <div id="states"></div>
+            <div class="hint">Empty text means FREE / BUSY. The status itself is shared by every Busy Toggle key and dial.</div>
+        </div>
+
+        <div class="panel" role="tabpanel" data-panel="advanced" hidden>
+            <section class="group">
+                <h2 class="section-title">Auto-reset</h2>
+                <label class="switch wide"><input type="checkbox" id="auto-reset-enabled" />Return to Free automatically</label>
+                <div class="field">
+                    <div class="field-header">
+                        <label class="label" for="auto-reset-minutes">After, minutes</label>
+                    </div>
+                    <input class="input" type="number" id="auto-reset-minutes" min="1" max="720" step="1" placeholder="25" />
+                </div>
+                <label class="switch wide"><input type="checkbox" id="auto-reset-time-left" />Show time left instead of text</label>
+                <div class="hint">The timer starts when this key or dial switches you to Busy. Switching back to Free by hand cancels it.</div>
+            </section>
+        </div>
     </div>
 
     <template id="state-template">
         <section class="state">
-            <h2 class="state-title"></h2>
+            <h2 class="section-title"></h2>
             <div class="field">
                 <div class="field-header">
                     <label class="label" data-for="icon">Icon</label>
@@ -155,11 +212,14 @@
             { value: "none", label: "No icon" },
         ];
 
+        const AUTO_RESET_DEFAULT_MINUTES = 25;
+
         const inspector = {
             websocket: null,
             context: null,
             settings: {},
-            forms: new Map(),
+            stateForms: new Map(),
+            autoResetForm: null,
         };
 
         function connectElgatoStreamDeckSocket(port, context, registerEvent, info, actionInfo) {
@@ -181,10 +241,19 @@
             };
         }
 
+        function selectTab(name) {
+            document.querySelectorAll(".tab").forEach((tab) => {
+                tab.setAttribute("aria-selected", String(tab.dataset.tab === name));
+            });
+            document.querySelectorAll(".panel").forEach((panel) => {
+                panel.hidden = panel.dataset.panel !== name;
+            });
+        }
+
         function createStateForm(state) {
             const section = document.getElementById("state-template").content.firstElementChild.cloneNode(true);
             section.dataset.status = state.status;
-            section.querySelector(".state-title").textContent = state.title;
+            section.querySelector(".section-title").textContent = state.title;
 
             const fields = {
                 icon: section.querySelector('[data-field="icon"]'),
@@ -208,18 +277,42 @@
             return { section, fields };
         }
 
-        function renderSettings() {
-            STATES.forEach((state) => {
-                const { fields } = inspector.forms.get(state.status);
-                const current = inspector.settings[state.status] ?? {};
-                fields.icon.value = current.icon ?? state.icon;
-                fields.showText.checked = current.showText !== false;
-                fields.text.value = current.text ?? "";
-                fields.text.disabled = !fields.showText.checked;
-            });
+        function createAutoResetForm() {
+            const fields = {
+                enabled: document.getElementById("auto-reset-enabled"),
+                minutes: document.getElementById("auto-reset-minutes"),
+                showTimeLeft: document.getElementById("auto-reset-time-left"),
+            };
+
+            fields.enabled.addEventListener("change", saveSettings);
+            fields.minutes.addEventListener("input", saveSettings);
+            fields.showTimeLeft.addEventListener("change", saveSettings);
+
+            return { fields };
         }
 
-        function readForm({ fields }) {
+        function renderStateForm({ fields }, state) {
+            const current = inspector.settings[state.status] ?? {};
+            fields.icon.value = current.icon ?? state.icon;
+            fields.showText.checked = current.showText !== false;
+            fields.text.value = current.text ?? "";
+            fields.text.disabled = !fields.showText.checked;
+        }
+
+        function renderAutoResetForm({ fields }) {
+            const current = inspector.settings.autoReset ?? {};
+            fields.enabled.checked = current.enabled === true;
+            fields.minutes.value = current.minutes ?? AUTO_RESET_DEFAULT_MINUTES;
+            fields.showTimeLeft.checked = current.showTimeLeft !== false;
+            fields.minutes.disabled = !fields.enabled.checked;
+        }
+
+        function renderSettings() {
+            STATES.forEach((state) => renderStateForm(inspector.stateForms.get(state.status), state));
+            renderAutoResetForm(inspector.autoResetForm);
+        }
+
+        function readStateForm({ fields }) {
             fields.text.disabled = !fields.showText.checked;
             return {
                 icon: fields.icon.value,
@@ -228,10 +321,21 @@
             };
         }
 
+        function readAutoResetForm({ fields }) {
+            const minutes = Number.parseInt(fields.minutes.value, 10);
+            fields.minutes.disabled = !fields.enabled.checked;
+            return {
+                enabled: fields.enabled.checked,
+                minutes: Number.isFinite(minutes) ? minutes : AUTO_RESET_DEFAULT_MINUTES,
+                showTimeLeft: fields.showTimeLeft.checked,
+            };
+        }
+
         function saveSettings() {
-            inspector.settings = Object.fromEntries(
-                STATES.map(({ status }) => [status, readForm(inspector.forms.get(status))]),
-            );
+            inspector.settings = {
+                ...Object.fromEntries(STATES.map(({ status }) => [status, readStateForm(inspector.stateForms.get(status))])),
+                autoReset: readAutoResetForm(inspector.autoResetForm),
+            };
             inspector.websocket?.send(JSON.stringify({
                 event: "setSettings",
                 context: inspector.context,
@@ -239,11 +343,17 @@
             }));
         }
 
+        document.querySelectorAll(".tab").forEach((tab) => {
+            tab.addEventListener("click", () => selectTab(tab.dataset.tab));
+        });
+
         STATES.forEach((state) => {
             const form = createStateForm(state);
-            inspector.forms.set(state.status, form);
+            inspector.stateForms.set(state.status, form);
             document.getElementById("states").appendChild(form.section);
         });
+
+        inspector.autoResetForm = createAutoResetForm();
 
         renderSettings();
     </script>

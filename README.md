@@ -10,6 +10,7 @@ A one-press status light for your Stream Deck. **Green** means you are free and 
 - **Always in sync.** Every Busy Toggle key and dial shows the same status, and the status is kept across Stream Deck restarts.
 - **Your icons.** Pick an icon for each state from 12 options (check, no entry, coffee, smile, door, headphones, microphone, video call, phone, moon, lock, muted bell), or none.
 - **Your words.** Rename either state, for example *On Air*, *In a meeting* or *Come in*, in any language, or hide the text. Long text wraps and shrinks to fit.
+- **Auto-reset.** Optionally return to free after a set number of minutes, with a live countdown on the key.
 - **Readable from across the room.** The whole tile is solid green or red, so even a key with no icon and no text still shows your status.
 
 ## Controls
@@ -32,7 +33,17 @@ Each state, **Free** and **Busy**, has its own settings:
 | **Text** | Text shown on the tile. Empty means `FREE` / `BUSY`. |
 | **Show** | Untick to hide the text and show only the icon, or only the colour. |
 
-Settings are per key, so different keys can look different. The status itself is shared by all of them.
+The **Advanced** tab holds the auto-reset timer:
+
+| Setting | Description |
+| --- | --- |
+| **Return to Free automatically** | When this key or dial switches you to busy, go back to free after the set time. Off by default. |
+| **After, minutes** | Timer length, 1–720 minutes. Defaults to 25. |
+| **Show time left instead of text** | Replace the busy text with a countdown while the timer runs. On by default. |
+
+Switching back to free by hand cancels the timer. A running timer survives Stream Deck restarts.
+
+Settings are per key, so different keys can look different and use different timers, for example a 25-minute focus key next to a 60-minute meeting key. The status itself is shared by all of them.
 
 ## Development
 
