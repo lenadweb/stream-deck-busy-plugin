@@ -1,6 +1,6 @@
 {
   "name": "stream-deck-busy",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Stream Deck toggle that shows whether you are free or busy: green means come in, red means do not disturb.",
   "type": "module",
   "scripts": {
