@@ -140,6 +140,18 @@
             color: var(--muted);
             line-height: 1.4;
         }
+
+        .footer {
+            margin-top: 4px;
+            padding-top: 10px;
+            text-align: center;
+        }
+        .footer a {
+            font-size: 13px;
+            color: #4a9eff;
+            text-decoration: underline;
+        }
+        .footer a:hover { color: #7ab8ff; }
     </style>
 </head>
 
@@ -169,6 +181,10 @@
                 <div class="hint">The timer starts when this key or dial switches you to Busy. Switching back to Free by hand cancels it.</div>
             </section>
         </div>
+
+        <footer class="footer">
+            <a id="github-link" href="https://github.com/lenadweb/split-view-extension">View source on GitHub</a>
+        </footer>
     </div>
 
     <template id="state-template">
@@ -343,9 +359,19 @@
             }));
         }
 
+        function openUrl(event) {
+            event.preventDefault();
+            inspector.websocket?.send(JSON.stringify({
+                event: "openUrl",
+                payload: { url: event.currentTarget.href },
+            }));
+        }
+
         document.querySelectorAll(".tab").forEach((tab) => {
             tab.addEventListener("click", () => selectTab(tab.dataset.tab));
         });
+
+        document.getElementById("github-link").addEventListener("click", openUrl);
 
         STATES.forEach((state) => {
             const form = createStateForm(state);
